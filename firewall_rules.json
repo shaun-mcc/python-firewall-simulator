@@ -1,0 +1,44 @@
+[
+  {
+    "rule_name": "Allow Admin Source SSH",
+    "source_subnet":  "192.168.1.50/32",
+    "port": 22,
+    "protocol":  "TCP",
+    "action": "ALLOW"
+  },
+  {
+    "rule_name": "Block All Other Employee SSH",
+    "source_subnet": "192.168.1.0/24",
+    "port": 22,
+    "protocol": "TCP",
+    "action": "BLOCK"
+  },
+  {
+    "rule_name": "Allow Employee Sources TCP Port 80",
+    "source_subnet": "192.168.1.0/24",
+    "port": 80,
+    "protocol": "TCP",
+    "action": "ALLOW"
+  },
+  {
+    "rule_name": "Block Guest Sources TCP Port 22",
+    "source_subnet": "192.168.2.0/26",
+    "port": 22,
+    "protocol": "TCP",
+    "action": "BLOCK"
+  },
+  {
+    "rule_name": "Block Guest Sources TCP Port 80",
+    "source_subnet": "192.168.2.0/26",
+    "port": 80,
+    "protocol": "TCP",
+    "action": "BLOCK"
+  },
+  {
+    "rule_name": "Allow Any Source TCP Port 443",
+    "source_subnet":  "ANY",
+    "port": 443,
+    "protocol":  "TCP",
+    "action": "ALLOW"
+  }
+]
