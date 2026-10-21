@@ -17,6 +17,7 @@ Developed as an extension of my cybersecurity capstone work. This project demons
 - Validates user-entered IP addresses, ports, and protocols
 - Appends packet decisions to an activity log
 - Handles configuration file-reading and log-writing errors
+- Separates rule evaluation into a `FirewallSimulator` class
 
 ## Requirements
 
@@ -28,6 +29,15 @@ The program uses the Python standard library:
 - `ipaddress`
 - `datetime`
 
+## Code Structure
+
+The simulator uses a `FirewallSimulator` class to separate packet evaluation from configuration validation, user input, and logging.
+
+- `__init__(configured_rules)` stores the configured firewall rules
+- `evaluate_packet(packet)` checks the packet against the stored rules in order, then returns the allow/block decision and the matching rule name
+- If no rule matches, then the method returns a block decision with an implicit deny message
+
+Configuration validation, user input, and activity logging are handled outside of the class.
 ## How It Works
 
 The simulator loads rules from firewall_rules.json and asks the user for a source IP address, destination port, and protocol.
