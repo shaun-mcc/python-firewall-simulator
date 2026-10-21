@@ -2,7 +2,34 @@ import json
 import ipaddress
 from datetime import datetime
 
-#JSON file validation
+#class creation
+class FirewallSimulator:
+    def __init__(self, configured_rules):
+        self.rules = configured_rules
+    #check packet against stored rules
+    def evaluate_packet(self, packet):
+        source_address = ipaddress.ip_address(packet['source_ip'])
+
+        for firewall_rule in self.rules:
+            if firewall_rule['source_subnet'] == "ANY":
+                ip_match = True
+            else:
+                rule_network = ipaddress.ip_network(firewall_rule['source_subnet'])
+                ip_match = source_address in rule_network
+
+            port_match = firewall_rule["port"] == packet["port"]
+            protocol_match = firewall_rule["protocol"] == packet["protocol"]
+
+            # return decision and matching rule name
+            if ip_match and port_match and protocol_match:
+                is_allowed = firewall_rule["action"] == "ALLOW"
+
+                return is_allowed, firewall_rule["rule_name"]
+
+        return False, "Implicit Deny (No Matching Rules)"
+
+
+#JSON file validation and system exit if error is popped
 try:
     with open('firewall_rules.json', encoding='utf-8') as f:
         rules = json.load(f)
@@ -19,7 +46,7 @@ except json.JSONDecodeError as error:
     raise SystemExit(1)
 
 except UnicodeDecodeError:
-    print("Configuration error: firewall_rules.json must use UTF-8 encoding.")
+    print("Configuration error: firewall_rules.json must use UTF-8 encoding")
     raise SystemExit(1)
 
 except OSError as error:
@@ -34,14 +61,16 @@ required_fields = [
     "protocol",
     "action"
 ]
-
+#JSON file list check
 if not isinstance(rules, list):
     print("Configuration error: the JSON must contain a list of rules")
     raise SystemExit(1)
 
+#JSON file rule warning
 if not rules:
     print("Warning: no rules configured. All simulated traffic will be blocked")
 
+#JSON file rule validation
 for rule_number, rule in enumerate(rules, start=1):
     if not isinstance(rule, dict):
         print(
@@ -53,6 +82,7 @@ for rule_number, rule in enumerate(rules, start=1):
     rule_name = rule.get('rule_name', 'unnamed rule')
     rule_label = f'rule {rule_number} ({rule_name!r})'
 
+    #JSON file required field validation
     for field in required_fields:
         if field not in rule:
             print(
@@ -61,11 +91,11 @@ for rule_number, rule in enumerate(rules, start=1):
             )
             raise SystemExit(1)
 
-    #rule name validation
+    #JSON file rule name validation
     if not isinstance(rule_name, str) or not rule_name.strip():
         print(
             f"Configuration error: {rule_label} "
-            "rule name must be a string"
+            "rule name must be a nonempty string"
         )
         raise SystemExit(1)
 
@@ -74,7 +104,8 @@ for rule_number, rule in enumerate(rules, start=1):
 
     if not isinstance(subnet, str):
         print(
-            f"Configuration error: {rule_label} is not a valid subnet "
+            f"Configuration error: {rule_label} "
+            f"has invalid source_subnet {subnet!r}"
             "source_subnet must be a nonempty string"
         )
         raise SystemExit(1)
@@ -95,7 +126,7 @@ for rule_number, rule in enumerate(rules, start=1):
         print(
             f"Configuration error: {rule_label} "
             f"has invalid action {rule['action']!r} "
-            "Action must be either ALLOW or BLOCK"
+            "action must be either ALLOW or BLOCK"
         )
         raise SystemExit(1)
 
@@ -106,7 +137,7 @@ for rule_number, rule in enumerate(rules, start=1):
         print(
             f"Configuration error: {rule_label} "
             f"has invalid port {port!r} "
-            "Port must be an integer between 1-65535"
+            "port must be an integer between 1-65535"
         )
         raise SystemExit(1)
 
@@ -118,6 +149,8 @@ for rule_number, rule in enumerate(rules, start=1):
             "protocol must be either TCP or UDP"
         )
         raise SystemExit(1)
+
+simulator = FirewallSimulator(rules)
 
 #IP Address input validation
 while True:
@@ -158,31 +191,15 @@ incoming_packet = {
 
 print(f"Analyzing packet from {incoming_packet['source_ip']} on port {incoming_packet['port']}")
 
-allowed = False
-matched_rule = "Implicit Deny (No Matching Rules)"
+allowed, matched_rule = simulator.evaluate_packet(incoming_packet)
 
-for rule in rules:
-    #check if rule matches packet criteria
-    if rule['source_subnet'] == "ANY":
-        ip_match = True
-    else:
-        rule_network = ipaddress.ip_network(rule['source_subnet'])
-        ip_match = packet_ip in rule_network
-
-    port_match = (rule['port'] == incoming_packet['port'])
-    protocol_match = (rule['protocol'] == incoming_packet['protocol'])
-
-    if ip_match and port_match and protocol_match:
-        if rule['action'] == "ALLOW":
-            allowed = True
-        matched_rule = rule['rule_name']
-        break
 
 action_result = "ALLOW" if allowed else "BLOCK"
 access_status = "GRANTED" if allowed else "DENIED"
 
 print(f"ACCESS {access_status}: Packet processed via rule '{matched_rule}'")
 
+#assign time and packet info for log creation
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 log_entry = f"[{timestamp}] ACTION={action_result} SRC={user_ip} DST_PORT={user_port} PROTOCOL={user_protocol} RULE='{matched_rule}'\n"
 
