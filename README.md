@@ -38,6 +38,29 @@ The simulator uses a `FirewallSimulator` class to separate packet evaluation fro
 - If no rule matches, then the method returns a block decision with an implicit deny message
 
 Configuration validation, user input, and activity logging are handled outside of the class.
+
+## Testing
+
+The project includes 10 automated unit tests for
+`FirewallSimulator.evaluate_packet()`.
+
+The tests cover:
+- Matching allow and block rules
+- Nonmatching source addresses, ports, and protocols
+- The `ANY` source option
+- First-match rule ordering
+- Skipping nonmatching rules
+- Implicit deny when no rules are configured
+
+Run the tests from the repository directory:
+
+```bash
+python -m unittest -v test_simulator
+```
+
+These tests use in-memory rules and packets. They do not test JSON
+configuration validation, interactive input, or activity logging.
+
 ## How It Works
 
 The simulator loads rules from firewall_rules.json and asks the user for a source IP address, destination port, and protocol.
